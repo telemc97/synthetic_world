@@ -86,8 +86,6 @@ crashlytics-build.properties
 /[Aa]ssets/Scenes/WeatherTest.*
 
 /[Aa]ssets/AirSimAssets.meta
-/[Aa]ssets/Plugins.meta
-/[Aa]ssets/Scenes.meta
 /[Aa]ssets/Standard\ Assets.meta
 
 /[Aa]ssets/Standard\ Assets/
