@@ -2,6 +2,7 @@ using Obstacle_ns;
 using System;
 using UnityEngine;
 using Random = UnityEngine.Random;
+using RosMessageTypes.Geometry;
 
 public class ActorLogic : MonoBehaviour
 {
