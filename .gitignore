@@ -74,3 +74,20 @@ crashlytics-build.properties
 
 
 /[Aa]ssets/0.DownloadedAssets/
+
+# AirSim Folders & Files
+/[Aa]ssets/AirSimAssets/
+/[Aa]ssets/Plugins/AirsimWrapper.dll
+
+/[Aa]ssets/Scenes/CarDemo.*
+/[Aa]ssets/Scenes/DroneDemo.*
+/[Aa]ssets/Scenes/MultiDroneDemo.*
+/[Aa]ssets/Scenes/SimModeSelector.*
+/[Aa]ssets/Scenes/WeatherTest.*
+
+/[Aa]ssets/AirSimAssets.meta
+/[Aa]ssets/Plugins.meta
+/[Aa]ssets/Scenes.meta
+/[Aa]ssets/Standard\ Assets.meta
+
+/[Aa]ssets/Standard\ Assets/
