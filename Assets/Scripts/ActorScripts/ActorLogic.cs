@@ -3,17 +3,20 @@ using System;
 using UnityEngine;
 using Random = UnityEngine.Random;
 using RosMessageTypes.Geometry;
+using System.Data;
 
 public class ActorLogic : MonoBehaviour
 {
     public Vector3 mainWaypoint;
-    public Vector3 avoidanceWaypoint;
 
+    public Vector3 avoidanceWaypoint;
+    int timesObstructed = 0;
+    public int maxTimesObstructed = 1;
     Obstacle obstacle;
 
     RaycastHit hit;
     bool waypointReached;
-    private Vector3 ActorArea;
+    private Vector3 actorArea;
     public float areaSize = 10.0f;
 
     //Walking characteristics
@@ -28,6 +31,7 @@ public class ActorLogic : MonoBehaviour
     Vector3 GravityVector;
 
     public float timeToWait = 10.0f;
+    float timeLeft;
 
     public float reachDist = 3.0f;
 
@@ -37,33 +41,36 @@ public class ActorLogic : MonoBehaviour
     private CharacterController controller;
 
     enum OperationMode 
-    { 
-        WAIT,
+    {
+        SETUP,
         INIT,
-        EXEC
+        EXEC,
+        WAIT
     }
-    private OperationMode operationMode = OperationMode.WAIT;
+    private OperationMode operationMode = OperationMode.SETUP;
 
     private void Start()
     {
-        operationMode = OperationMode.WAIT;
+        operationMode = OperationMode.SETUP;
     }
 
     private void OnEnable()
     {
-        operationMode = OperationMode.WAIT;
+        operationMode = OperationMode.SETUP;
     }
 
     private void OnDisable()
     {
-        operationMode = OperationMode.WAIT;
+        operationMode = OperationMode.SETUP;
     }
 
     void Setup()
     {
         controller = GetComponent<CharacterController>();
         animator = GetComponent<Animator>();
-        ActorArea = this.transform.parent.gameObject.transform.position;
+        actorArea = this.transform.parent.gameObject.transform.position;
+        mainWaypoint = actorArea;
+        timeLeft = timeToWait;
         waypointReached = true;
     }
 
@@ -71,18 +78,25 @@ public class ActorLogic : MonoBehaviour
     {
         switch (operationMode)
         {
-            case OperationMode.WAIT:
+            case OperationMode.SETUP:
                 if (this.transform.parent.tag == "SyntheticHumanArea") { operationMode = OperationMode.INIT; }
                 break;
             case OperationMode.INIT:
                 Setup();
+                mainWaypoint = GetRandomWaypoint();
                 operationMode = OperationMode.EXEC;
                 break;
             case OperationMode.EXEC:
                 Wander();
                 break;
+            case OperationMode.WAIT:
+                if (!Waiting())
+                {
+                    operationMode = OperationMode.EXEC;
+                }
+                break;
             default:
-                operationMode = OperationMode.WAIT;
+                operationMode = OperationMode.SETUP;
                 break;
         }
     }
@@ -90,12 +104,11 @@ public class ActorLogic : MonoBehaviour
     public void Wander()
     {
         ApplyGravity();
-        animator.SetFloat("Speed", speed);
+        SetSpeed(speed);
         obstacle = CheckForObstacleAhead(50);
         if (waypointReached)
         {
-            speed = 0f;
-            Wait(timeToWait);
+            operationMode = OperationMode.WAIT;
             mainWaypoint = GetRandomWaypoint();
             waypointReached = false;
         }
@@ -103,6 +116,12 @@ public class ActorLogic : MonoBehaviour
         {
             if (obstacle.ObstacleExists())
             {
+                timesObstructed++;
+                if (timesObstructed > maxTimesObstructed)
+                {
+                    operationMode = OperationMode.WAIT;
+                    timesObstructed = 0;
+                }
                 avoidanceWaypoint = CalculateAvoidanceWaypoint(obstacle.ObstaclePosition(), avoidanceRadius, mainWaypoint);
                 MoveTo(avoidanceWaypoint);
             }
@@ -112,6 +131,12 @@ public class ActorLogic : MonoBehaviour
             }
         }
 
+    }
+
+    void SetSpeed(float spd)
+    {
+        speed = spd;
+        animator.SetFloat("Speed", spd);
     }
 
     private Obstacle CheckForObstacleAhead(int dist)
@@ -127,25 +152,76 @@ public class ActorLogic : MonoBehaviour
         return obs;
     }
 
-    public void Wait(float time)
+    public bool Waiting()
     {
-        while (time > 0)
+        SetSpeed(0f);
+        timeLeft -= Time.deltaTime;
+        if (timeLeft <= 0f)
         {
-            time -= Time.deltaTime;
+            timeLeft = timeToWait;
+            return false;
         }
+        return true;
     }
 
     private Vector3 GetRandomWaypoint()
     {
+        RaycastHit raycastHit = new RaycastHit();
         float distance;
         float xCord, yCord;
+        Vector3 waypoint = new Vector3();
+        string hitTag = null;
         do
         {
-            xCord = Random.Range((ActorArea.x - areaSize), (ActorArea.x + areaSize));
-            yCord = Random.Range((ActorArea.z - areaSize), (ActorArea.z + areaSize));
+            Vector2 newAreaMinCoords = new Vector2();
+            Vector2 newAreaMaxCoords = new Vector2();
+            //implement finding new waypoint in a subrectangle formed by the intersect of 2 rectangles (center actor area and center this actor)
+            Vector2 centerA = new Vector2(this.transform.position.x, this.transform.position.z);
+            Vector2 centerB = new Vector2(actorArea.x, actorArea.z);
+            //Find xmin and xmax intersection coords
+            if (centerA.x - areaSize > centerB.x - areaSize)
+            {
+                newAreaMinCoords.x = centerA.x - areaSize;
+                newAreaMaxCoords.x = centerB.x + areaSize;
+            }
+            else if (centerB.x - areaSize > centerA.x - areaSize)
+            {
+                newAreaMinCoords.x = centerB.x - areaSize;
+                newAreaMaxCoords.x = centerA.x + areaSize;
+            }
+            else //centerA = centerB actor position is on the same coordinate as
+            {
+                newAreaMinCoords.x = centerB.x - areaSize;
+                newAreaMaxCoords.x = centerB.x + areaSize;
+            }
+            //Find ymin and ymax intersection coords
+            if (centerA.y - areaSize > centerB.y - areaSize)
+            {
+                newAreaMinCoords.y = centerA.y - areaSize;
+                newAreaMaxCoords.y = centerB.y + areaSize;
+            }else if (centerB.y - areaSize > centerA.y - areaSize)
+            {
+                newAreaMinCoords.y = centerB.y - areaSize;
+                newAreaMaxCoords.y = centerA.y + areaSize;
+            }
+            else //centerA = centerB actor position is on the same coordinate as
+            {
+                newAreaMinCoords.y = centerB.y - areaSize;
+                newAreaMaxCoords.y = centerA.y + areaSize;
+            }
+            xCord = Random.Range(newAreaMinCoords.x, newAreaMaxCoords.x);
+            yCord = Random.Range(newAreaMinCoords.y, newAreaMaxCoords.y);
             distance = Mathf.Sqrt(Mathf.Pow((xCord - this.transform.position.x), 2) + Mathf.Pow((yCord - this.transform.position.y), 2));
-        } while (distance < 5);
-        Vector3 waypoint = new Vector3(xCord, 0, yCord);
+            waypoint.x = xCord;
+            waypoint.y = 0;
+            waypoint.z = yCord;
+            if (Physics.Raycast(waypoint, Vector3.down, out raycastHit))
+            {
+                hitTag = raycastHit.transform.tag;
+            }
+
+        } while (distance < 5 && hitTag!="Water" && hitTag != null);
+        
         return waypoint;
     }
 

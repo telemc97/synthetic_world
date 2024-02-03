@@ -10,7 +10,6 @@ public class AnnotatorObject : MonoBehaviour
     OperationMode operationMode;
     Renderer thisRenderer;
     public string objectClass;
-    public string datasetFolder;
     int clsID;
 
     enum OperationMode

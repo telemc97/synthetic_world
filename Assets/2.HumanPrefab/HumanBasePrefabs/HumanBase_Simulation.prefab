@@ -173,14 +173,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   mainWaypoint: {x: 0, y: 0, z: 0}
   avoidanceWaypoint: {x: 0, y: 0, z: 0}
+  maxTimesObstructed: 1
   areaSize: 10
   speed: 0
-  walkingspeed: 2
+  walkingspeed: 1.5
   accelaration: 6
   decelaration: 5
   turnSmoothTime: 1
   rotationSpeed: 2
-  timeToWait: 0
+  timeToWait: 5
   reachDist: 3
   avoidanceRadius: 3
 --- !u!143 &-7845347281365659601
@@ -227,3 +228,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fee3e73393492bd408216e59e87e4835, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  objectClass: 

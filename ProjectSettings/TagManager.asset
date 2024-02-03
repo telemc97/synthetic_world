@@ -8,6 +8,7 @@ TagManager:
   - ViewCameras
   - SyntheticHuman
   - SyntheticHumanArea
+  - Water
   layers:
   - Default
   - TransparentFX
