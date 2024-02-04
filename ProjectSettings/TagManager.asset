@@ -9,6 +9,8 @@ TagManager:
   - SyntheticHuman
   - SyntheticHumanArea
   - Water
+  - LampPostLamp
+  - Terrain
   layers:
   - Default
   - TransparentFX

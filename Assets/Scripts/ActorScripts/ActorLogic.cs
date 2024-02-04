@@ -104,7 +104,7 @@ public class ActorLogic : MonoBehaviour
     public void Wander()
     {
         ApplyGravity();
-        SetSpeed(speed);
+         SetSpeed(speed);
         obstacle = CheckForObstacleAhead(50);
         if (waypointReached)
         {
@@ -119,8 +119,8 @@ public class ActorLogic : MonoBehaviour
                 timesObstructed++;
                 if (timesObstructed > maxTimesObstructed)
                 {
-                    operationMode = OperationMode.WAIT;
                     timesObstructed = 0;
+                    operationMode = OperationMode.WAIT;
                 }
                 avoidanceWaypoint = CalculateAvoidanceWaypoint(obstacle.ObstaclePosition(), avoidanceRadius, mainWaypoint);
                 MoveTo(avoidanceWaypoint);
@@ -146,7 +146,10 @@ public class ActorLogic : MonoBehaviour
         {
             if (hit.collider != null)
             {
-                obs.SetObstacleData(this.transform.position, hit.transform.position, hit.transform.gameObject.tag);
+                if (hit.transform.gameObject.tag != "Terrain")
+                {
+                    obs.SetObstacleData(this.transform.position, hit.transform.position, hit.transform.gameObject.tag);
+                }
             }
         }
         return obs;
@@ -213,11 +216,12 @@ public class ActorLogic : MonoBehaviour
             yCord = Random.Range(newAreaMinCoords.y, newAreaMaxCoords.y);
             distance = Mathf.Sqrt(Mathf.Pow((xCord - this.transform.position.x), 2) + Mathf.Pow((yCord - this.transform.position.y), 2));
             waypoint.x = xCord;
-            waypoint.y = 0;
             waypoint.z = yCord;
+            waypoint.y = Terrain.activeTerrain.SampleHeight(waypoint) + Terrain.activeTerrain.GetPosition().y + 0.5f; // get terrain height at that point
             if (Physics.Raycast(waypoint, Vector3.down, out raycastHit))
             {
                 hitTag = raycastHit.transform.tag;
+                Debug.Log(hitTag);
             }
 
         } while (distance < 5 && hitTag!="Water" && hitTag != null);

@@ -56,6 +56,7 @@ public class SyntheticHumanRandomizer : HumanGenerationRandomizer
                     Vector3 newHumanPos = new Vector3(Random.Range((area.transform.position.x - humanAreaSize), (area.transform.position.x + humanAreaSize)),
                                                       0f,
                                                       Random.Range((area.transform.position.z - humanAreaSize), (area.transform.position.z + humanAreaSize)));
+                    newHumanPos.y = Terrain.activeTerrain.SampleHeight(newHumanPos) + Terrain.activeTerrain.GetPosition().y + 0.5f; // get terrain height at that point
                     humans[humanIt].transform.SetParent(area.transform);
                     humans[humanIt].transform.position = newHumanPos;
                     humanIt++;
