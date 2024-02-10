@@ -16,13 +16,14 @@ public class AnnotatorObject : MonoBehaviour
     {
         INIT,
         VISIBLE,
-        INVISIBLE
+        INVISIBLE,
+        DISABLE
     }
 
     // Start is called before the first frame update
     void Start()
     {
-        Setup();
+        operationMode = OperationMode.INIT;
     }
 
     void Setup()
@@ -30,15 +31,22 @@ public class AnnotatorObject : MonoBehaviour
         mainCamera = Camera.main;
         b = this.GetComponent<Collider>().bounds;
         thisRenderer = GetComponent<Renderer>();    
-        operationMode = OperationMode.INIT;
         objectClass = this.transform.tag;
-        if (!mainCamera.GetComponent<AnnotatorCamera>().classes.ContainsKey(this.transform.tag))
+        if (mainCamera.GetComponent<AnnotatorCamera>() != null)
         {
-            int val = mainCamera.GetComponent<AnnotatorCamera>().classes.Count;
-            mainCamera.GetComponent<AnnotatorCamera>().classes.Add(this.transform.tag, val);
-            mainCamera.GetComponent<AnnotatorCamera>().classes_mir.Add(val, this.transform.tag);
+            if (!mainCamera.GetComponent<AnnotatorCamera>().classes.ContainsKey(this.transform.tag))
+            {
+                int val = mainCamera.GetComponent<AnnotatorCamera>().classes.Count;
+                mainCamera.GetComponent<AnnotatorCamera>().classes.Add(this.transform.tag, val);
+                mainCamera.GetComponent<AnnotatorCamera>().classes_mir.Add(val, this.transform.tag);
+            }
+            clsID = mainCamera.GetComponent<AnnotatorCamera>().classes[this.transform.tag];
         }
-        clsID = mainCamera.GetComponent<AnnotatorCamera>().classes[this.transform.tag];
+        else
+        {
+            Debug.Log("Camera Annotator Script not found");
+            operationMode = OperationMode.DISABLE;
+        }
     }
 
     void GetAnnotation()
@@ -79,6 +87,10 @@ public class AnnotatorObject : MonoBehaviour
         {
             case OperationMode.INIT:
                 Setup();
+                if(operationMode == OperationMode.DISABLE)
+                {
+                    break;
+                }
                 if (thisRenderer.isVisible)
                 {
                     operationMode = OperationMode.VISIBLE;
@@ -93,6 +105,8 @@ public class AnnotatorObject : MonoBehaviour
                 break;
             case OperationMode.INVISIBLE:
                 operationMode = OperationMode.INIT;
+                break;
+            case OperationMode.DISABLE:
                 break;
             default:
                 operationMode = OperationMode.INIT;
