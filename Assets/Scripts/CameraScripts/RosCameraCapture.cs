@@ -1,8 +1,6 @@
 using UnityEngine;
 using Unity.Robotics.ROSTCPConnector;
 using RosMessageTypes.Sensor;
-using UnityEngine.Rendering;
-using AirSimUnity;
 using Unity.Robotics.ROSTCPConnector.MessageGeneration;
 using RosMessageTypes.Std;
 
@@ -11,7 +9,7 @@ public class RosCameraCapture : MonoBehaviour
     //TODO: Test to make sure it works and make it tidy;
     private Camera thisCamera;
     private ROSConnection ros;
-    private string topicName;
+    public string topicName;
 
     public float publishMessageFrequency;
     private float timeElapsed;
@@ -20,7 +18,6 @@ public class RosCameraCapture : MonoBehaviour
     public int ImageHeight;
 
     private RenderTexture renderTexture;
-    private int bytesPerPixel;
     private Texture2D texture2D;
     private Rect rect;
 
@@ -40,8 +37,6 @@ public class RosCameraCapture : MonoBehaviour
         {
             //Secondary camera different than the MainCamera.
         }
-        //Set Topic name
-        topicName = this.gameObject.name + "_RosTopic";
         //Get Component's Camera
         thisCamera = GetComponent<Camera>();
         //Setup Camera
@@ -67,7 +62,6 @@ public class RosCameraCapture : MonoBehaviour
         RenderTexture oldRT = RenderTexture.active;
         RenderTexture.active = thisCamera.targetTexture;
         thisCamera.Render();
-        // Read pixels to texture
         texture2D.ReadPixels(rect, 0, 0);
         texture2D.Apply();
         RenderTexture.active = oldRT;
@@ -76,8 +70,8 @@ public class RosCameraCapture : MonoBehaviour
 
     public void PublishImage(Texture2D image)
     {
-        HeaderMsg imageHeaderMsg = new HeaderMsg();
-        ImageMsg imageMsg = image.ToImageMsg(imageHeaderMsg);
+        HeaderMsg headerMsg = new HeaderMsg();
+        ImageMsg imageMsg = image.ToImageMsg(headerMsg);
         imageMsg.width = (uint)ImageWidth;
         imageMsg.height = (uint)ImageHeight;
         ros.Publish(topicName, imageMsg);

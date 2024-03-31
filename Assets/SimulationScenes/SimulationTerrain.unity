@@ -453,6 +453,7 @@ GameObject:
   - component: {fileID: 1197735253}
   - component: {fileID: 1197735252}
   - component: {fileID: 1197735251}
+  - component: {fileID: 1197735257}
   m_Layer: 0
   m_Name: Camera
   m_TagString: MainCamera
@@ -472,11 +473,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 73ddea6146218f3428e3cd0b1c303299, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  publishMessageFrequency: 5
+  topicName: ros_unity_camera
+  publishMessageFrequency: 0.1
   ImageWidth: 1366
   ImageHeight: 768
-  cam: {fileID: 0}
-  bytesPerPixel: 0
 --- !u!114 &1197735252
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -685,6 +685,20 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 6
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1197735257
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1197735250}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bf85c7bd8ce4524d83a4be557984ffe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  publishMessageFrequency: 0.1
+  topicName: ros_unity_imu
 --- !u!1001 &1312559242
 PrefabInstance:
   m_ObjectHideFlags: 0
