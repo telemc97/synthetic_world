@@ -1,18 +1,28 @@
 using UnityEngine;
 using Unity.Robotics.ROSTCPConnector;
 using RosMessageTypes.Sensor;
+using UnityEngine.Rendering;
+using AirSimUnity;
+using Unity.Robotics.ROSTCPConnector.MessageGeneration;
+using RosMessageTypes.Std;
 
 public class RosCameraCapture : MonoBehaviour
 {
     //TODO: Test to make sure it works and make it tidy;
-    Camera thisCamera;
-    private ImageMsg imageMsg;
+    private Camera thisCamera;
     private ROSConnection ros;
     private string topicName;
-    private RenderTexture renderTexture;
 
     public float publishMessageFrequency;
     private float timeElapsed;
+
+    public int ImageWidth;
+    public int ImageHeight;
+
+    private RenderTexture renderTexture;
+    private int bytesPerPixel;
+    private Texture2D texture2D;
+    private Rect rect;
 
     private OperationMode operationMode;
 
@@ -25,60 +35,51 @@ public class RosCameraCapture : MonoBehaviour
 
     public void Setup()
     {
-        //Set The Tag
-        this.gameObject.tag = "RosCamera";
+        //Set The Tag and the name if it is not MainCamera
+        if (this.gameObject.tag != "MainCamera")
+        {
+            //Secondary camera different than the MainCamera.
+        }
+        //Set Topic name
+        topicName = this.gameObject.name + "_RosTopic";
         //Get Component's Camera
         thisCamera = GetComponent<Camera>();
+        //Setup Camera
+        SetupCamera();
         //Initialize ROS
         ros = ROSConnection.GetOrCreateInstance();
         //Initialize Publisher
         ros.RegisterPublisher<ImageMsg>(topicName);
         //Set operation mode to execute
         operationMode = OperationMode.EXEC;
-        //Try and get unique name ID
-        topicName = GetObjectName();
     }
 
-    private string GetObjectName()
+    private void SetupCamera()
     {
-        string gameObjectName;
-        System.Random r = new System.Random();
-        gameObjectName = this.gameObject.name + r.Next(0, 999).ToString();
-        //Ceck if ID is already in the Scene if yes do not update the operationMode to try get new id on the next iteration
-        GameObject[] gameObjects = GameObject.FindGameObjectsWithTag("RosCamera");
-        foreach (GameObject gameObject in gameObjects)
-        {
-            if (gameObject.name == gameObjectName)
-            {
-                operationMode = OperationMode.SETUP;
-            }
-        }
-
-        return gameObjectName;
+        renderTexture = new RenderTexture(ImageWidth, ImageHeight, 24);
+        texture2D = new Texture2D(ImageWidth, ImageHeight);
+        rect = new Rect(0, 0, ImageWidth, ImageHeight);
+        thisCamera.targetTexture = renderTexture;
     }
 
-    private byte[] CaptureScreenshot()
+    private Texture2D CaptureScreenshot()
     {
-        Camera.main.targetTexture = renderTexture;
-        RenderTexture currentRT = RenderTexture.active;
-        RenderTexture.active = renderTexture;
-        Camera.main.Render();
-        Texture2D mainCameraTexture = new Texture2D(renderTexture.width, renderTexture.height);
-        mainCameraTexture.ReadPixels(new Rect(0, 0, renderTexture.width, renderTexture.height), 0, 0);
-        mainCameraTexture.Apply();
-        RenderTexture.active = currentRT;
-        // Get the raw byte info from the screenshot
-        byte[] imageBytes = mainCameraTexture.GetRawTextureData();
-        Camera.main.targetTexture = null;
-        return imageBytes;
+        RenderTexture oldRT = RenderTexture.active;
+        RenderTexture.active = thisCamera.targetTexture;
+        thisCamera.Render();
+        // Read pixels to texture
+        texture2D.ReadPixels(rect, 0, 0);
+        texture2D.Apply();
+        RenderTexture.active = oldRT;
+        return texture2D;
     }
 
-    public void PublishImage(byte[] image)
+    public void PublishImage(Texture2D image)
     {
-        //check if images resolution changes ?
-        imageMsg.width = (uint)Camera.main.targetTexture.width;
-        imageMsg.height = (uint)Camera.main.targetTexture.height;
-        imageMsg.data = image;
+        HeaderMsg imageHeaderMsg = new HeaderMsg();
+        ImageMsg imageMsg = image.ToImageMsg(imageHeaderMsg);
+        imageMsg.width = (uint)ImageWidth;
+        imageMsg.height = (uint)ImageHeight;
         ros.Publish(topicName, imageMsg);
     }
 
@@ -87,7 +88,7 @@ public class RosCameraCapture : MonoBehaviour
         timeElapsed += Time.deltaTime;
         if (timeElapsed > publishMessageFrequency)
         {
-            byte[] cameraImage = CaptureScreenshot();
+            Texture2D cameraImage = CaptureScreenshot();
             PublishImage(cameraImage);
             timeElapsed = 0;
         }
