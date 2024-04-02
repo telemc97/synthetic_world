@@ -14,8 +14,8 @@ public class RosCameraCapture : MonoBehaviour
     public float publishMessageFrequency;
     private float timeElapsed;
 
-    public int ImageWidth;
-    public int ImageHeight;
+    public int imageWidth;
+    public int imageHeight;
 
     private RenderTexture renderTexture;
     private Texture2D texture2D;
@@ -45,15 +45,16 @@ public class RosCameraCapture : MonoBehaviour
         ros = ROSConnection.GetOrCreateInstance();
         //Initialize Publisher
         ros.RegisterPublisher<ImageMsg>(topicName);
+        ros.RegisterPublisher<CameraInfoMsg>(topicName + "_camera_info");
         //Set operation mode to execute
         operationMode = OperationMode.EXEC;
     }
 
     private void SetupCamera()
     {
-        renderTexture = new RenderTexture(ImageWidth, ImageHeight, 24);
-        texture2D = new Texture2D(ImageWidth, ImageHeight);
-        rect = new Rect(0, 0, ImageWidth, ImageHeight);
+        renderTexture = new RenderTexture(imageWidth, imageHeight, 24);
+        texture2D = new Texture2D(imageWidth, imageHeight);
+        rect = new Rect(0, 0, imageWidth, imageHeight);
         thisCamera.targetTexture = renderTexture;
     }
 
@@ -68,13 +69,18 @@ public class RosCameraCapture : MonoBehaviour
         return texture2D;
     }
 
-    public void PublishImage(Texture2D image)
+    public void PublishImage(Texture2D image, HeaderMsg headerMsg)
     {
-        HeaderMsg headerMsg = new HeaderMsg();
         ImageMsg imageMsg = image.ToImageMsg(headerMsg);
-        imageMsg.width = (uint)ImageWidth;
-        imageMsg.height = (uint)ImageHeight;
+        imageMsg.width = (uint)imageWidth;
+        imageMsg.height = (uint)imageHeight;
         ros.Publish(topicName, imageMsg);
+    }
+
+    public void PublishInfoTopic(HeaderMsg headerMsg)
+    {
+        CameraInfoMsg cameraInfoMsg = CameraInfoGenerator.ConstructCameraInfoMessage(thisCamera, headerMsg);
+        ros.Publish(topicName + "_camera_info", cameraInfoMsg);
     }
 
     public void Exec()
@@ -83,7 +89,9 @@ public class RosCameraCapture : MonoBehaviour
         if (timeElapsed > publishMessageFrequency)
         {
             Texture2D cameraImage = CaptureScreenshot();
-            PublishImage(cameraImage);
+            HeaderMsg header = new HeaderMsg();
+            PublishImage(cameraImage, header);
+            PublishInfoTopic(header);
             timeElapsed = 0;
         }
     }

@@ -9,11 +9,15 @@ public class CustomAirSimInit : MonoBehaviour
 {
     public string DroneScenePath;
     public string CarScenePath;
+    public string FreeCameraScenePath;
+
+    //Retrieves the simulation mode from the settings.json
+    public bool automaticLoad;
     void Awake()
     {
         if (GetAirSimSettingsFileName() != string.Empty)
         {
-            if (AirSimSettings.Initialize())
+            if (AirSimSettings.Initialize() && automaticLoad)
             {
 
                 switch (AirSimSettings.GetSettings().SimMode)
@@ -107,6 +111,23 @@ public class CustomAirSimInit : MonoBehaviour
         return result;
     }
 
+    public void DroneButtonPressed()
+    {
+        AirSimSettings.GetSettings().SimMode = "Multirotor";
+        SceneManager.LoadSceneAsync(DroneScenePath, LoadSceneMode.Single);
+    }
+
+    public void CarButtonPressed()
+    {
+        AirSimSettings.GetSettings().SimMode = "Car";
+        SceneManager.LoadSceneAsync(CarScenePath, LoadSceneMode.Single);
+    }
+
+    public void FreeCamButtonPressed()
+    {
+        SceneManager.LoadSceneAsync(FreeCameraScenePath, LoadSceneMode.Single);
+    }
+
     private void LoadSceneAsPerSimMode(string load_name)
     {
         if (load_name == "Car")
@@ -119,5 +140,10 @@ public class CustomAirSimInit : MonoBehaviour
             AirSimSettings.GetSettings().SimMode = "Multirotor";
             SceneManager.LoadSceneAsync(DroneScenePath, LoadSceneMode.Single);
         }
+        else if (load_name == "FreeCamera")
+        {
+            SceneManager.LoadSceneAsync(FreeCameraScenePath, LoadSceneMode.Single);
+        }
+
     }
 }
