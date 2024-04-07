@@ -1,18 +1,29 @@
 using UnityEngine;
 using Unity.Robotics.ROSTCPConnector;
 using RosMessageTypes.Sensor;
+using RosMessageTypes.Geometry;
 using Unity.Robotics.ROSTCPConnector.MessageGeneration;
 using RosMessageTypes.Std;
 
 public class RosCameraCapture : MonoBehaviour
 {
     //TODO: Test to make sure it works and make it tidy;
+
+
     private Camera thisCamera;
     private ROSConnection ros;
+    private TFSystem tf;
+
     public string topicName;
+    public string frameName;
+
+    public bool isStereo;
 
     public float publishMessageFrequency;
     private float timeElapsed;
+
+    //Messages
+    HeaderMsg headerMsg;
 
     public int imageWidth;
     public int imageHeight;
@@ -43,11 +54,16 @@ public class RosCameraCapture : MonoBehaviour
         SetupCamera();
         //Initialize ROS
         ros = ROSConnection.GetOrCreateInstance();
+        tf = TFSystem.GetOrCreateInstance();
         //Initialize Publisher
         ros.RegisterPublisher<ImageMsg>(topicName);
         ros.RegisterPublisher<CameraInfoMsg>(topicName + "_camera_info");
+        //Initialize Messages
+        headerMsg = new HeaderMsg();
+        headerMsg.frame_id = frameName;
         //Set operation mode to execute
         operationMode = OperationMode.EXEC;
+    
     }
 
     private void SetupCamera()
@@ -69,7 +85,7 @@ public class RosCameraCapture : MonoBehaviour
         return texture2D;
     }
 
-    public void PublishImage(Texture2D image, HeaderMsg headerMsg)
+    public void PublishImage(Texture2D image)
     {
         ImageMsg imageMsg = image.ToImageMsg(headerMsg);
         imageMsg.width = (uint)imageWidth;
@@ -77,21 +93,24 @@ public class RosCameraCapture : MonoBehaviour
         ros.Publish(topicName, imageMsg);
     }
 
-    public void PublishInfoTopic(HeaderMsg headerMsg)
+    public void PublishInfoTopic()
     {
         CameraInfoMsg cameraInfoMsg = CameraInfoGenerator.ConstructCameraInfoMessage(thisCamera, headerMsg);
         ros.Publish(topicName + "_camera_info", cameraInfoMsg);
     }
 
+
     public void Exec()
     {
         timeElapsed += Time.deltaTime;
-        if (timeElapsed > publishMessageFrequency)
+        if (timeElapsed > (1.0f / publishMessageFrequency))
         {
+            if (!isStereo) 
+            { 
+            }
             Texture2D cameraImage = CaptureScreenshot();
-            HeaderMsg header = new HeaderMsg();
-            PublishImage(cameraImage, header);
-            PublishInfoTopic(header);
+            PublishImage(cameraImage);
+            PublishInfoTopic();
             timeElapsed = 0;
         }
     }

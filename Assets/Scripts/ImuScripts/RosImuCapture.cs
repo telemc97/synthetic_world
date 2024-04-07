@@ -6,6 +6,7 @@ using RosMessageTypes.Std;
 using UnityEngine;
 using System;
 using Unity.Robotics.ROSTCPConnector;
+using System.Security.Policy;
 
 public class RosImuCapture : MonoBehaviour
 {
@@ -18,18 +19,42 @@ public class RosImuCapture : MonoBehaviour
         WAIT
     }
 
+    Vector3 oldRotation;
+    Vector3 oldVelocity;
+    Vector3 oldPosition;
+    long oldTime;
+
+    //Messages
+    QuaternionMsg quaternionMsg;
+    Vector3Msg angularVelocityMsg;
+    Vector3Msg linearAccelarationMsg;
+    HeaderMsg headerMsg;
+    ImuMsg imuMsg;
+
     public float publishMessageFrequency;
     private float timeElapsed;
 
+    public string frameName;
+
     private ROSConnection ros;
+    private TFSystem tf;
+
     public string topicName;
 
     public void Setup()
     {
         //Initialize ROS
         ros = ROSConnection.GetOrCreateInstance();
+        tf = TFSystem.GetOrCreateInstance();
         //Initialize Publisher
         ros.RegisterPublisher<ImuMsg>(topicName);
+        //Initialize Messages
+        headerMsg = new HeaderMsg();
+        headerMsg.frame_id = frameName;
+        quaternionMsg = new QuaternionMsg();
+        angularVelocityMsg = new Vector3Msg();
+        linearAccelarationMsg = new Vector3Msg();
+        imuMsg = new ImuMsg();
         //Set operation mode to execute
         operationMode = OperationMode.EXEC;
     }
@@ -37,7 +62,7 @@ public class RosImuCapture : MonoBehaviour
     public void Exec()
     {
         timeElapsed += Time.deltaTime;
-        if (timeElapsed > publishMessageFrequency)
+        if (timeElapsed > (1.0f / publishMessageFrequency))
         {
             CalculateAndPublish();
             timeElapsed = 0;
@@ -46,50 +71,45 @@ public class RosImuCapture : MonoBehaviour
     }
 
     //Reference to:
-    Vector3 oldRotation;
-    Vector3 oldVelocity;
-    Vector3 oldPosition;
-    long oldTime;
+    //Vector3 oldRotation;
+    //Vector3 oldVelocity;
+    //Vector3 oldPosition;
+    //long oldTime;
     public void CalculateAndPublish()
     {
         //Get current timestamp
         long timeInterval = DateTimeOffset.Now.ToUnixTimeSeconds() - oldTime;
 
         //Header
-        HeaderMsg headerMsg = new HeaderMsg();
 
         //Orientation
-        QuaternionMsg quaternionMsg = new QuaternionMsg();
         quaternionMsg.w = this.gameObject.transform.rotation.w;
         quaternionMsg.y = this.gameObject.transform.rotation.z;
         quaternionMsg.x = this.gameObject.transform.rotation.x;
         quaternionMsg.z = this.gameObject.transform.rotation.y;
 
         //Angular Velocity
-        Vector3Msg angularVelocityMsg = new Vector3Msg();
-        angularVelocityMsg.y = Math.Abs(oldRotation.z - this.gameObject.transform.rotation.eulerAngles.z) / timeInterval;
-        angularVelocityMsg.x = Math.Abs(oldRotation.x - this.gameObject.transform.rotation.eulerAngles.x) / timeInterval;
-        angularVelocityMsg.z = Math.Abs(oldRotation.y - this.gameObject.transform.rotation.eulerAngles.y) / timeInterval;
+        angularVelocityMsg.y = -oldRotation.x + this.gameObject.transform.rotation.eulerAngles.x / timeInterval;
+        angularVelocityMsg.x = oldRotation.z - this.gameObject.transform.rotation.eulerAngles.z / timeInterval;
+        angularVelocityMsg.z = oldRotation.y - this.gameObject.transform.rotation.eulerAngles.y / timeInterval;
 
         oldRotation.y = this.gameObject.transform.rotation.eulerAngles.y;
         oldRotation.x = this.gameObject.transform.rotation.eulerAngles.x;
         oldRotation.z = this.gameObject.transform.rotation.eulerAngles.z;
 
         //Linear Accelaration
-        Vector3Msg linearAccelarationMsg = new Vector3Msg();
-        linearAccelarationMsg.y = Math.Abs(oldVelocity.z - (Math.Abs(oldPosition.z - this.gameObject.transform.position.z) / timeInterval));
-        linearAccelarationMsg.x = Math.Abs(oldVelocity.x - (Math.Abs(oldPosition.x - this.gameObject.transform.position.x) / timeInterval));
-        linearAccelarationMsg.z = Math.Abs(oldVelocity.y - (Math.Abs(oldPosition.y - this.gameObject.transform.position.y) / timeInterval));
+        linearAccelarationMsg.y = (-oldVelocity.x + (-oldPosition.x + this.gameObject.transform.position.x)) / timeInterval;
+        linearAccelarationMsg.x = (oldVelocity.z - (oldPosition.z - this.gameObject.transform.position.z)) / timeInterval;
+        linearAccelarationMsg.z = (oldVelocity.y - (oldPosition.y - this.gameObject.transform.position.y)) / timeInterval;
 
         oldPosition.y = this.gameObject.transform.position.y;
         oldPosition.x = this.gameObject.transform.position.x;
         oldPosition.z = this.gameObject.transform.position.z;
 
-        oldVelocity.y = Math.Abs(oldPosition.y - this.gameObject.transform.position.y) / timeInterval;
-        oldVelocity.x = Math.Abs(oldPosition.x - this.gameObject.transform.position.x) / timeInterval;
-        oldVelocity.z = Math.Abs(oldPosition.y - this.gameObject.transform.position.y) / timeInterval;
+        oldVelocity.y = (oldPosition.y - this.gameObject.transform.position.y) / timeInterval;
+        oldVelocity.x = (oldPosition.x - this.gameObject.transform.position.x) / timeInterval;
+        oldVelocity.z = (oldPosition.y - this.gameObject.transform.position.y) / timeInterval;
         
-        ImuMsg imuMsg = new ImuMsg();
         imuMsg.header = headerMsg;
         imuMsg.orientation = quaternionMsg;
         imuMsg.angular_velocity = angularVelocityMsg;
@@ -97,6 +117,12 @@ public class RosImuCapture : MonoBehaviour
 
         ros.Publish(topicName, imuMsg);
     }
+
+    public void PublishTF()
+    {
+        tf.GetOrCreateFrame(frameName);
+    }
+
 
     private void Update()
     {
