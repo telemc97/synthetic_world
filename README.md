@@ -18,10 +18,10 @@ This world is depended on the following unity packages:
 
 ### ToDo List
 
-- [ ] Make everything start after the scenario finalization.
-- [ ] Fix "Waiting" upon a human reaches its waypoint.
-- [ ] Update y coord (height) at actor spawn.
+- [x] Make everything start after the scenario finalization.
+- [x] Fix "Waiting" upon a human reaches its waypoint.
+- [x] Update y coord (height) at actor spawn.
 - [x] Fix Dataset File save (.txt & .png).
-- [ ] Implement terrain type awareness (make actors do not walk in the water).
-- [ ] Generate Waypoint Inside the boundaries of "ActorArea" GameObject.
-- [ ] Implement coordinates transformation for waypoint generation.
+- [x] Implement terrain type awareness (make actors do not walk in the water).
+- [x] Generate Waypoint Inside the boundaries of "ActorArea" GameObject.
+- [x] Implement coordinates transformation for waypoint generation.
