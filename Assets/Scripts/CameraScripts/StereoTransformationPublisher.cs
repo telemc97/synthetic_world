@@ -1,26 +1,24 @@
 using RosMessageTypes.Geometry;
 using RosMessageTypes.Std;
 using RosMessageTypes.Tf2;
-using System.Collections;
 using System.Collections.Generic;
-using System.Security.Policy;
 using Unity.Robotics.ROSTCPConnector;
 using Unity.Robotics.ROSTCPConnector.ROSGeometry;
 using UnityEngine;
+using RosMessageTypes.BuiltinInterfaces;
+using System;
+
 
 public class StereoTransformationPublisher : MonoBehaviour
 {
+    const string TfTopic = "/tf";
+
     public Transform baseLink;
 
     public string baseLinkFrame;
     public string childLinkFrame;
 
-    string topicName;
-
     private ROSConnection ros;
-    private TFSystem tf;
-
-    TFStream tfStream;
 
     //Used Messages
     Vector3Msg translationMsg;
@@ -28,7 +26,8 @@ public class StereoTransformationPublisher : MonoBehaviour
     TransformMsg transformMsg;
     TransformStampedMsg transformStampedMsg;
     HeaderMsg headerMsg;
-    
+    TFMessageMsg tFMessageMsg;
+
     private float timeElapsed;
     public float publishMessageFrequency;
 
@@ -46,30 +45,38 @@ public class StereoTransformationPublisher : MonoBehaviour
     {
         //Initialize ROS
         ros = ROSConnection.GetOrCreateInstance();
-        tf = TFSystem.GetOrCreateInstance();
-        //Get child frame id
+
+        //Get Child Frame ID
         childLinkFrame = this.GetComponentInChildren<RosCameraCapture>().frameName;
-        topicName = baseLinkFrame + "_to_" + childLinkFrame;
+
         //Initialize Publisher
-        ros.RegisterPublisher<TransformStampedMsg>(topicName);
+        ros.RegisterPublisher<TFMessageMsg>(TfTopic);
+
         //Initialize Messages
-        headerMsg = new HeaderMsg();
-        headerMsg.frame_id = baseLinkFrame;
+        headerMsg = new HeaderMsg((uint)0, new TimeMsg(), baseLinkFrame);
         translationMsg = new Vector3Msg();
         quaternionMsg = new QuaternionMsg();
         transformMsg = new TransformMsg();
         transformStampedMsg = new TransformStampedMsg();
-        transformStampedMsg.child_frame_id = childLinkFrame;
-        //Set operation mode to execute
+        tFMessageMsg = new TFMessageMsg();
+
+        //Finally Set Operation Mode To Wait
         operationMode = OperationMode.EXEC;
+    }
+
+    private void Wait()
+    {
+
     }
 
     public void PublishCameraTransform()
     {
+        List<TransformStampedMsg> tfMessageList = new List<TransformStampedMsg>();
+
         //TODO transformation is the other way around
         //Local positions and rotation based to Transform baseLink
-        Vector3 localTransform = baseLink.transform.TransformPoint(this.transform.position);
-        Quaternion localRotation = Quaternion.Euler(baseLink.transform.TransformDirection(this.transform.rotation.eulerAngles));
+        Vector3 localTransform = baseLink.InverseTransformPoint(this.transform.position);
+        Quaternion localRotation = Quaternion.Euler(baseLink.InverseTransformDirection(this.transform.rotation.eulerAngles));
 
         //Populate Translation Msg
         translationMsg = localTransform.To<FLU>();
@@ -85,14 +92,16 @@ public class StereoTransformationPublisher : MonoBehaviour
         transformMsg.rotation = quaternionMsg;
 
         //Populate Transform Stamped Msg
+        headerMsg.seq++;
+        headerMsg.stamp.sec = (uint)DateTimeOffset.Now.ToUnixTimeSeconds();
+        headerMsg.stamp.nanosec = (uint)DateTimeOffset.Now.ToUnixTimeMilliseconds() * 1000000;
         transformStampedMsg.header = headerMsg;
         transformStampedMsg.transform = transformMsg;
-        ros.Publish(topicName, transformStampedMsg);
-    }
+        transformStampedMsg.child_frame_id = childLinkFrame;
 
-    public void PublishTF()
-    {
-        tfStream = tf.GetOrCreateFrame(childLinkFrame);
+        tfMessageList.Add(transformStampedMsg);
+        tFMessageMsg.transforms = tfMessageList.ToArray();
+        ros.Publish(TfTopic, tFMessageMsg);
     }
 
     private void Exec()
@@ -100,7 +109,6 @@ public class StereoTransformationPublisher : MonoBehaviour
         timeElapsed += Time.deltaTime;
         if (timeElapsed > (1.0f / publishMessageFrequency))
         {
-            PublishTF();
             PublishCameraTransform();
             timeElapsed = 0;
         }
@@ -117,6 +125,8 @@ public class StereoTransformationPublisher : MonoBehaviour
                 Exec();
                 break;
             case OperationMode.WAIT:
+                Wait(); 
+                break;
             default:
                 break;
         }

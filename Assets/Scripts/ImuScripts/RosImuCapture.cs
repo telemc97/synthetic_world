@@ -1,12 +1,10 @@
-using System.Collections;
-using System.Collections.Generic;
 using RosMessageTypes.Sensor;
 using RosMessageTypes.Geometry;
 using RosMessageTypes.Std;
 using UnityEngine;
 using System;
 using Unity.Robotics.ROSTCPConnector;
-using System.Security.Policy;
+using RosMessageTypes.BuiltinInterfaces;
 
 public class RosImuCapture : MonoBehaviour
 {
@@ -49,8 +47,7 @@ public class RosImuCapture : MonoBehaviour
         //Initialize Publisher
         ros.RegisterPublisher<ImuMsg>(topicName);
         //Initialize Messages
-        headerMsg = new HeaderMsg();
-        headerMsg.frame_id = frameName;
+        headerMsg = new HeaderMsg((uint)0, new TimeMsg(), frameName);
         quaternionMsg = new QuaternionMsg();
         angularVelocityMsg = new Vector3Msg();
         linearAccelarationMsg = new Vector3Msg();
@@ -109,7 +106,10 @@ public class RosImuCapture : MonoBehaviour
         oldVelocity.y = (oldPosition.y - this.gameObject.transform.position.y) / timeInterval;
         oldVelocity.x = (oldPosition.x - this.gameObject.transform.position.x) / timeInterval;
         oldVelocity.z = (oldPosition.y - this.gameObject.transform.position.y) / timeInterval;
-        
+
+        headerMsg.seq++;
+        headerMsg.stamp.sec = (uint)DateTimeOffset.Now.ToUnixTimeSeconds();
+        headerMsg.stamp.nanosec = (uint)DateTimeOffset.Now.ToUnixTimeMilliseconds() * 1000000;
         imuMsg.header = headerMsg;
         imuMsg.orientation = quaternionMsg;
         imuMsg.angular_velocity = angularVelocityMsg;

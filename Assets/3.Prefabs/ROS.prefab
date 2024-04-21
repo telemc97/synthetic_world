@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5315508030302975467}
   - component: {fileID: 5315508030302975466}
+  - component: {fileID: 2376373685032672890}
   m_Layer: 0
   m_Name: ROS
   m_TagString: Untagged
@@ -53,3 +54,18 @@ MonoBehaviour:
   m_ShowHUD: 1
   m_TFTopics: []
   listenForTFMessages: 0
+--- !u!114 &2376373685032672890
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5315508030302975465}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1d05b8b89d25f2448809f032d16563b5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_ClockMode: 0
+  m_LastSetClockMode: 0
+  m_PublishRateHz: 100

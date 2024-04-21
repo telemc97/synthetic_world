@@ -1,18 +1,20 @@
 using UnityEngine;
 using Unity.Robotics.ROSTCPConnector;
 using RosMessageTypes.Sensor;
-using RosMessageTypes.Geometry;
 using Unity.Robotics.ROSTCPConnector.MessageGeneration;
 using RosMessageTypes.Std;
+using UnityEditor;
+using RosMessageTypes.BuiltinInterfaces;
+using System;
 
 public class RosCameraCapture : MonoBehaviour
 {
     //TODO: Test to make sure it works and make it tidy;
 
-
     private Camera thisCamera;
+    private RenderTexture renderTexture;
+
     private ROSConnection ros;
-    private TFSystem tf;
 
     public string topicName;
     public string frameName;
@@ -28,11 +30,10 @@ public class RosCameraCapture : MonoBehaviour
     public int imageWidth;
     public int imageHeight;
 
-    private RenderTexture renderTexture;
-    private Texture2D texture2D;
-    private Rect rect;
-
     private OperationMode operationMode;
+
+
+    private Texture2D destinationTexture;
 
     enum OperationMode
     {
@@ -48,19 +49,23 @@ public class RosCameraCapture : MonoBehaviour
         {
             //Secondary camera different than the MainCamera.
         }
+
         //Get Component's Camera
         thisCamera = GetComponent<Camera>();
+
         //Setup Camera
         SetupCamera();
+
         //Initialize ROS
         ros = ROSConnection.GetOrCreateInstance();
-        tf = TFSystem.GetOrCreateInstance();
+
         //Initialize Publisher
         ros.RegisterPublisher<ImageMsg>(topicName);
         ros.RegisterPublisher<CameraInfoMsg>(topicName + "_camera_info");
+
         //Initialize Messages
-        headerMsg = new HeaderMsg();
-        headerMsg.frame_id = frameName;
+        headerMsg = new HeaderMsg((uint)0, new TimeMsg(), frameName);
+
         //Set operation mode to execute
         operationMode = OperationMode.EXEC;
     
@@ -69,24 +74,32 @@ public class RosCameraCapture : MonoBehaviour
     private void SetupCamera()
     {
         renderTexture = new RenderTexture(imageWidth, imageHeight, 24);
-        texture2D = new Texture2D(imageWidth, imageHeight);
-        rect = new Rect(0, 0, imageWidth, imageHeight);
         thisCamera.targetTexture = renderTexture;
     }
 
     private Texture2D CaptureScreenshot()
     {
-        RenderTexture oldRT = RenderTexture.active;
-        RenderTexture.active = thisCamera.targetTexture;
-        thisCamera.Render();
-        texture2D.ReadPixels(rect, 0, 0);
-        texture2D.Apply();
-        RenderTexture.active = oldRT;
-        return texture2D;
+        if (!EditorApplication.isUpdating)
+            Unsupported.RestoreOverrideLightingSettings();
+
+        var tmp = RenderTexture.GetTemporary((int)imageWidth, (int)imageHeight);
+
+        Graphics.Blit(renderTexture, tmp);
+
+        RenderTexture.active = tmp;
+        Texture2D image = new Texture2D((int)imageWidth, (int)imageHeight, TextureFormat.RGB24, false, false);
+        image.ReadPixels(new Rect(0, 0, imageWidth, imageHeight), 0, 0);
+        image.Apply();
+        RenderTexture.ReleaseTemporary(tmp);
+
+        return image;
     }
 
     public void PublishImage(Texture2D image)
     {
+        headerMsg.seq++;
+        headerMsg.stamp.sec = (uint)DateTimeOffset.Now.ToUnixTimeSeconds();
+        headerMsg.stamp.nanosec = (uint)DateTimeOffset.Now.ToUnixTimeMilliseconds() * 1000000;
         ImageMsg imageMsg = image.ToImageMsg(headerMsg);
         imageMsg.width = (uint)imageWidth;
         imageMsg.height = (uint)imageHeight;
